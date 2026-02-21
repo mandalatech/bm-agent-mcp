@@ -4,14 +4,14 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that 
 
 ## What It Does
 
-Connect any MCP-compatible AI app (Claude Desktop, Cursor, Windsurf, etc.) to Books Mandala's live catalog. Ask questions like:
+Connect any MCP-compatible AI app (Claude Desktop, Cursor, Windsurf, etc.) to Books Mandala's live catalog. Your AI assistant can:
 
-- "What Nepal books are available on Books Mandala?"
-- "Find me a self-help book under NPR 1,000"
-- "What books does Paulo Coelho have in stock?"
-- "Show me the latest manga arrivals"
+- Search books by title, author, or ISBN
+- Browse 177 genres and filter by category
+- Check current bestsellers and new arrivals
+- Look up author profiles and their available titles
 
-The AI gets real-time data — prices, stock availability, genres, ratings — and links back to booksmandala.com for purchasing.
+All responses include real-time prices (NPR), stock availability, and direct links back to booksmandala.com for purchasing.
 
 ## Available Tools
 
