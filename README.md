@@ -1,4 +1,4 @@
-# Books Mandala MCP Server
+# Books Mandala MCP
 
 An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that lets AI assistants search, browse, and discover books from [Books Mandala](https://booksmandala.com) — Nepal's largest online bookstore with 50,000+ titles.
 
@@ -51,10 +51,11 @@ Protocol: MCP 2025-03-26 (Streamable HTTP transport)
 
 ## REST API
 
-This MCP server is powered by the Books Mandala Agent API. If you prefer direct REST access:
+This MCP is powered by the Books Mandala Agent API. If you prefer direct REST access:
 
 - **Base URL:** `https://booksmandala.com/api/agent/v1`
-- **Docs:** [OpenAPI 3.0 Spec](https://booksmandala.com/api/agent/v1/docs)
+- **Docs:** [API Documentation](https://booksmandala.com/agent-api)
+- **Full spec:** [booksmandala.com/api/agent/v1/docs](https://booksmandala.com/api/agent/v1/docs)
 - **Auth:** API key via `X-API-Key` header
 - **Get a key:** Email dev@mandalatech.io
 
