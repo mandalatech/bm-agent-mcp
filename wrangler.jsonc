@@ -4,6 +4,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-03-10",
   "compatibility_flags": ["nodejs_compat"],
+  // `agents/dist/mcp/client.js` dynamically imports "ai" in the MCP *client*
+  // path only; this worker is an MCP *server* and never runs it. Alias "ai" to
+  // a local stub so esbuild can resolve the dead import without bundling the
+  // full Vercel AI SDK. See ai-stub.mjs.
+  "alias": {
+    "ai": "./ai-stub.mjs"
+  },
   "migrations": [
     {
       "tag": "v1",
