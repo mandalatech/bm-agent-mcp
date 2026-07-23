@@ -4,6 +4,12 @@ import { z } from "zod";
 
 const API_BASE = "https://booksmandala.com/api/agent/v1";
 
+// Path segments (ISBN / slug) are interpolated into the upstream URL. Constrain
+// them to slug/ISBN-safe characters so a value like "../../admin" can't traverse
+// out of /api/agent/v1/ and carry the server-side API key to unintended paths on
+// booksmandala.com. encodeURIComponent is applied at each call site as a second layer.
+const PATH_SAFE = /^[A-Za-z0-9-]+$/;
+
 interface Env {
 	MCP_OBJECT: DurableObjectNamespace;
 	BM_API_KEY: string;
@@ -18,8 +24,9 @@ async function apiCall(path: string, apiKey: string): Promise<any> {
 	});
 
 	if (!res.ok) {
-		const err = await res.json().catch(() => ({ error: res.statusText }));
-		throw new Error((err as any).error || `API returned ${res.status}`);
+		// Do not surface backend error bodies to public MCP clients — they can
+		// leak internal detail. Return a generic status-coded message only.
+		throw new Error(`API request failed (${res.status})`);
 	}
 
 	return res.json();
@@ -102,11 +109,14 @@ export class BooksMandalaAgentMCP extends McpAgent<Env> {
 			"get_book",
 			"Get detailed information about a specific book by ISBN or slug. Returns full details including description, publisher, pages, ratings, and purchase link.",
 			{
-				identifier: z.string().describe("ISBN (e.g. 9781847941831) or book slug (e.g. atomic-habits)"),
+				identifier: z
+					.string()
+					.regex(PATH_SAFE, "Identifier must be an ISBN or slug (letters, digits, hyphens only)")
+					.describe("ISBN (e.g. 9781847941831) or book slug (e.g. atomic-habits)"),
 			},
 			async ({ identifier }) => {
 				try {
-					const data = await apiCall(`/books/${identifier}`, this.env.BM_API_KEY);
+					const data = await apiCall(`/books/${encodeURIComponent(identifier)}`, this.env.BM_API_KEY);
 					return {
 						content: [{ type: "text", text: bookDetailToText(data.data) }],
 					};
@@ -140,7 +150,10 @@ export class BooksMandalaAgentMCP extends McpAgent<Env> {
 			"browse_genre",
 			"Browse books within a specific genre. Use a genre slug from list_genres.",
 			{
-				genre_slug: z.string().describe("Genre slug (e.g. fiction-and-literature, self-help, manga)"),
+				genre_slug: z
+					.string()
+					.regex(PATH_SAFE, "Genre slug must contain letters, digits, and hyphens only")
+					.describe("Genre slug (e.g. fiction-and-literature, self-help, manga)"),
 				page: z.number().int().min(1).default(1).optional().describe("Page number"),
 				limit: z.number().int().min(1).max(50).default(20).optional().describe("Results per page"),
 			},
@@ -151,7 +164,7 @@ export class BooksMandalaAgentMCP extends McpAgent<Env> {
 				const qs = params.toString() ? `?${params}` : "";
 
 				try {
-					const data = await apiCall(`/genres/${genre_slug}/books${qs}`, this.env.BM_API_KEY);
+					const data = await apiCall(`/genres/${encodeURIComponent(genre_slug)}/books${qs}`, this.env.BM_API_KEY);
 					const books = data.data.map(bookToText).join("\n\n---\n\n");
 					return {
 						content: [
@@ -222,7 +235,10 @@ export class BooksMandalaAgentMCP extends McpAgent<Env> {
 			"get_author",
 			"Get author details and their available books on Books Mandala.",
 			{
-				author_slug: z.string().describe("Author slug (e.g. james-clear, paulo-coelho)"),
+				author_slug: z
+					.string()
+					.regex(PATH_SAFE, "Author slug must contain letters, digits, and hyphens only")
+					.describe("Author slug (e.g. james-clear, paulo-coelho)"),
 				limit: z.number().int().min(1).max(50).default(20).optional().describe("Max books to return"),
 			},
 			async ({ author_slug, limit }) => {
@@ -231,7 +247,7 @@ export class BooksMandalaAgentMCP extends McpAgent<Env> {
 				const qs = params.toString() ? `?${params}` : "";
 
 				try {
-					const data = await apiCall(`/authors/${author_slug}${qs}`, this.env.BM_API_KEY);
+					const data = await apiCall(`/authors/${encodeURIComponent(author_slug)}${qs}`, this.env.BM_API_KEY);
 					const author = data.data.author;
 					const books = data.data.books.map(bookToText).join("\n\n---\n\n");
 
