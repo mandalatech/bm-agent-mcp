@@ -13,6 +13,9 @@ const PATH_SAFE = /^[A-Za-z0-9-]+$/;
 interface Env {
 	MCP_OBJECT: DurableObjectNamespace;
 	BM_API_KEY: string;
+	// Cloudflare Rate Limiting binding (configured in wrangler.jsonc). Typed
+	// inline so we don't depend on the ambient RateLimit type being present.
+	RATE_LIMITER: { limit(options: { key: string }): Promise<{ success: boolean }> };
 }
 
 async function apiCall(path: string, apiKey: string): Promise<any> {
@@ -270,10 +273,22 @@ export class BooksMandalaAgentMCP extends McpAgent<Env> {
 }
 
 export default {
-	fetch(request: Request, env: Env, ctx: ExecutionContext) {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
+			// The public /mcp endpoint is unauthenticated (this worker holds its
+			// own upstream key), so bound abuse per client IP before a single
+			// caller can exhaust the shared upstream budget.
+			const ip = request.headers.get("cf-connecting-ip") ?? "anonymous";
+			const { success } = await env.RATE_LIMITER.limit({ key: ip });
+			if (!success) {
+				return new Response(
+					JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }),
+					{ status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
+				);
+			}
+
 			return (BooksMandalaAgentMCP as any).serve("/mcp").fetch(request, env, ctx);
 		}
 
